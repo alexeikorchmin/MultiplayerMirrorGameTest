@@ -462,6 +462,7 @@ GameObject:
   - component: {fileID: 6462775977868505631}
   - component: {fileID: 6443808597182020161}
   - component: {fileID: 4773036375918330119}
+  - component: {fileID: 1087501693610095241}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -538,10 +539,9 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0.1
-  speedValue: 1
-  jumpValue: 4
+  speedValue: 0.2
+  jumpValue: 7
   sensitivity: 5
-  blinkValue: 3
   playerCamera: {fileID: 6407562394050654460}
   rb: {fileID: 4773036375918330119}
 --- !u!54 &4773036375918330119
@@ -560,3 +560,18 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &1087501693610095241
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8090061579187006346}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51837275d4acd1a41a6a9e99a2cce224, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  customPlayerMovement: {fileID: 6443808597182020161}
+  blinkValue: 20
+  rb: {fileID: 4773036375918330119}

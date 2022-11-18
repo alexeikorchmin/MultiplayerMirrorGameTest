@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using Mirror;
 using Cinemachine;
@@ -7,16 +6,16 @@ public class CustomPlayerMovement : NetworkBehaviour
 {
     [SerializeField] private float speedValue = 5f;
     [SerializeField] private float jumpValue = 4f;
-    [SerializeField] private float sensitivity = 5f;
-    [SerializeField] private float blinkValue = 10f;
+    [SerializeField] private float maxSpeed = 5f;
+    [SerializeField] private float mouseSensitivity = 5f;
     [SerializeField] private CinemachineVirtualCamera playerCamera;
     [SerializeField] private Rigidbody rb;
 
+    private Vector3 startPosition;
     private Vector3 movementDirection;
     private float horizontalMovement;
     private float verticalMovement;
     private KeyCode jumpKey = KeyCode.Space;
-    private KeyCode blinkKey = KeyCode.Mouse0;
     private bool isGrounded = true;
 
     private float mouseX;
@@ -25,7 +24,10 @@ public class CustomPlayerMovement : NetworkBehaviour
     private float yRotation;
     private float maxLook = 60f;
 
-    private Vector3 startPosition;
+    public Vector3 GetMoveDirection()
+    {
+        return movementDirection;
+    }
 
     private void Awake()
     {
@@ -38,7 +40,6 @@ public class CustomPlayerMovement : NetworkBehaviour
     {
         Jump();
         MouseMovement();
-        PlayerBlink();
         CheckFallPosition();
     }
 
@@ -49,19 +50,13 @@ public class CustomPlayerMovement : NetworkBehaviour
 
     #region MouseMovement
 
-    private void CheckFallPosition()
-    {
-        if (transform.position.y < -5)
-            transform.position = startPosition;
-    }
-
     private void MouseMovement()
     {
         mouseX = Input.GetAxisRaw("Mouse X");
         mouseY = Input.GetAxisRaw("Mouse Y");
 
-        xRotation -= mouseY * sensitivity;
-        yRotation += mouseX * sensitivity;
+        xRotation -= mouseY * mouseSensitivity;
+        yRotation += mouseX * mouseSensitivity;
 
         xRotation = Mathf.Clamp(xRotation, -maxLook, maxLook);
 
@@ -78,8 +73,20 @@ public class CustomPlayerMovement : NetworkBehaviour
         horizontalMovement = Input.GetAxis("Horizontal");
         verticalMovement = Input.GetAxis("Vertical");
 
-        movementDirection = new Vector3(horizontalMovement, 0, verticalMovement);
-        transform.Translate(movementDirection * (speedValue * Time.deltaTime));
+        if (Mathf.Approximately(horizontalMovement, 0f) &&
+            Mathf.Approximately(verticalMovement, 0f) &&
+            isGrounded)
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+        else if (Mathf.Abs(rb.velocity.x) < maxSpeed &&
+                 Mathf.Abs(rb.velocity.y) < maxSpeed &&
+                 Mathf.Abs(rb.velocity.z) < maxSpeed)
+        {
+            movementDirection = transform.forward * verticalMovement + transform.right * horizontalMovement;
+            rb.AddForce(movementDirection.normalized * speedValue, ForceMode.VelocityChange);
+        }
     }
 
     private void Jump()
@@ -88,34 +95,21 @@ public class CustomPlayerMovement : NetworkBehaviour
 
         rb.AddForce(Vector3.up * jumpValue, ForceMode.VelocityChange);
         isGrounded = false;
-        StartCoroutine(WaitForJumpValueChange());
     }
 
-    //private void OnCollisionEnter(Collision collision)
-    //{
-    //    if (isGrounded) return;
-
-    //    if (collision.gameObject.CompareTag("Ground"))
-    //        isGrounded = true;
-    //}
-
-    private IEnumerator WaitForJumpValueChange()
+    private void OnCollisionEnter(Collision collision)
     {
-        yield return new WaitForSeconds(1f);
-        isGrounded = true;
+        if (isGrounded) return;
+
+        if (collision.gameObject.CompareTag("Ground"))
+            isGrounded = true;
     }
 
     #endregion
 
-    #region Blink
-
-    private void PlayerBlink()
+    private void CheckFallPosition()
     {
-        if (!Input.GetKeyDown(blinkKey)) return;
-
-        //rb.AddForce(movementDirection * blinkValue, ForceMode.VelocityChange);
-        transform.Translate(movementDirection.normalized * blinkValue);
+        if (transform.position.y < -5)
+            transform.position = startPosition;
     }
-
-    #endregion
 }
