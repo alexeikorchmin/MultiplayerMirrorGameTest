@@ -1,8 +1,9 @@
 using System;
 using UnityEngine;
 using TMPro;
+using Mirror;
 
-public class PlayerManagerUI : MonoBehaviour
+public class PlayerManagerUI : NetworkBehaviour
 {
     [SerializeField] private TMP_Text blinkCooldownText;
 

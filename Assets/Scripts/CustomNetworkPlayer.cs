@@ -1,9 +1,12 @@
 using UnityEngine;
 using Mirror;
 using TMPro;
+using Color = UnityEngine.Color;
 
 public class CustomNetworkPlayer : NetworkBehaviour
 {
+    public int playerIndex { get; set; }
+
     [SerializeField] private TMP_Text playerNameText = null;
     [SerializeField] private Renderer colorRenderer = null;
 
@@ -13,7 +16,20 @@ public class CustomNetworkPlayer : NetworkBehaviour
     [SyncVar(hook = nameof(PlayerColorUpdateHandler))]
     [SerializeField] private Color playerColor = Color.black;
 
+    private PlayerDisplayScoreData playerDisplayScoreData;
+    private int playerScore;
+
     #region Server
+
+    [Server]
+    public void SetPlayerDisplayScoreData(PlayerDisplayScoreData newPlayerDisplayScoreData, bool isActive)
+    {
+        playerDisplayScoreData = newPlayerDisplayScoreData;
+        playerDisplayScoreData.SetGOValue(isActive);
+        playerDisplayScoreData.SetDisplayPlayerName(playerName);
+        playerDisplayScoreData.SetDisplayPlayerScore(playerScore.ToString());
+        playerDisplayScoreData.SetDisplayPlayerDataColor(playerColor);
+    }
 
     [Server]
     public void SetPlayerName(string newPlayerName)
@@ -30,7 +46,7 @@ public class CustomNetworkPlayer : NetworkBehaviour
     [Command]
     private void CmdSetPlayerName(string newPlayerName)
     {
-        if (newPlayerName.Length < 2 || newPlayerName.Length > 15) return;
+        if (newPlayerName.Length < 2 || newPlayerName.Length > 20) return;
 
         RpcShowNewName(newPlayerName);
         SetPlayerName(newPlayerName);

@@ -24,7 +24,6 @@ public class CustomPlayerMovement : NetworkBehaviour
     private float yRotation;
     private float maxLook = 60f;
 
-
     #region Server
 
     [Command]

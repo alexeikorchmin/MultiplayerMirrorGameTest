@@ -83,7 +83,7 @@ namespace Mirror
         /// <summary>The maximum number of concurrent network connections to support.</summary>
         [FormerlySerializedAs("m_MaxConnections")]
         [Tooltip("Maximum number of concurrent connections.")]
-        public int maxConnections = 100;
+        public int maxConnections = 8;
 
         [Header("Authentication")]
         [Tooltip("Authentication component attached to this object")]
