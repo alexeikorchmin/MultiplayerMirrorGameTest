@@ -4,13 +4,13 @@ using TMPro;
 
 public class CustomNetworkPlayer : NetworkBehaviour
 {
-    [SerializeField] private TMP_Text playerNameText;
-    [SerializeField] private Renderer colorRenderer;
+    [SerializeField] private TMP_Text playerNameText = null;
+    [SerializeField] private Renderer colorRenderer = null;
 
-    [SyncVar]
-    [SerializeField] private string playerName = "Unknown Name";
+    [SyncVar(hook = nameof(PlayerNameUpdateHandler))]
+    [SerializeField] private string playerName;
 
-    [SyncVar]
+    [SyncVar(hook = nameof(PlayerColorUpdateHandler))]
     [SerializeField] private Color playerColor = Color.black;
 
     #region Server
@@ -30,6 +30,8 @@ public class CustomNetworkPlayer : NetworkBehaviour
     [Command]
     private void CmdSetPlayerName(string newPlayerName)
     {
+        if (newPlayerName.Length < 2 || newPlayerName.Length > 15) return;
+
         RpcShowNewName(newPlayerName);
         SetPlayerName(newPlayerName);
     }
@@ -45,7 +47,8 @@ public class CustomNetworkPlayer : NetworkBehaviour
 
     private void PlayerColorUpdateHandler(Color oldColor, Color newColor)
     {
-        colorRenderer.material.SetColor("_BaseColor", newColor);
+        colorRenderer.material.color = newColor;
+        playerNameText.color = newColor;
     }
 
     [ContextMenu("Set New Name")]

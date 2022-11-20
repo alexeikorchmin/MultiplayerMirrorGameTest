@@ -24,51 +24,11 @@ public class CustomPlayerMovement : NetworkBehaviour
     private float yRotation;
     private float maxLook = 60f;
 
-    public Vector3 GetMoveDirection()
-    {
-        return movementDirection;
-    }
 
-    private void Awake()
-    {
-        rb.constraints = RigidbodyConstraints.FreezeRotation;
-        startPosition = transform.position;
-        Cursor.lockState = CursorLockMode.Locked;
-    }
+    #region Server
 
-    private void Update()
-    {
-        Jump();
-        MouseMovement();
-        CheckFallPosition();
-    }
-
-    private void FixedUpdate()
-    {
-        PlayerMove();
-    }
-
-    #region MouseMovement
-
-    private void MouseMovement()
-    {
-        mouseX = Input.GetAxisRaw("Mouse X");
-        mouseY = Input.GetAxisRaw("Mouse Y");
-
-        xRotation -= mouseY * mouseSensitivity;
-        yRotation += mouseX * mouseSensitivity;
-
-        xRotation = Mathf.Clamp(xRotation, -maxLook, maxLook);
-
-        playerCamera.transform.localRotation = Quaternion.Euler(xRotation, 0, 0);
-        transform.rotation = Quaternion.Euler(0, yRotation, 0);
-    }
-
-    #endregion
-
-    #region KeyboardMovement
-
-    private void PlayerMove()
+    [Command]
+    private void CmdPlayerMove()
     {
         horizontalMovement = Input.GetAxis("Horizontal");
         verticalMovement = Input.GetAxis("Vertical");
@@ -89,7 +49,8 @@ public class CustomPlayerMovement : NetworkBehaviour
         }
     }
 
-    private void Jump()
+    [Command]
+    private void CmdJump()
     {
         if (!Input.GetKeyDown(jumpKey) || !isGrounded) return;
 
@@ -97,8 +58,68 @@ public class CustomPlayerMovement : NetworkBehaviour
         isGrounded = false;
     }
 
+    [Command]
+    private void CmdMouseMovement()
+    {
+        mouseX = Input.GetAxisRaw("Mouse X");
+        mouseY = Input.GetAxisRaw("Mouse Y");
+
+        xRotation -= mouseY * mouseSensitivity;
+        yRotation += mouseX * mouseSensitivity;
+
+        xRotation = Mathf.Clamp(xRotation, -maxLook, maxLook);
+
+        playerCamera.transform.localRotation = Quaternion.Euler(xRotation, 0, 0);
+        transform.rotation = Quaternion.Euler(0, yRotation, 0);
+    }
+
+    [Command]
+    private void CmdCheckFallPosition()
+    {
+        if (transform.position.y < -5)
+            transform.position = startPosition;
+    }
+
+    #endregion
+
+    #region Client
+
+    public Vector3 GetMoveDirection()
+    {
+        return movementDirection;
+    }
+
+    [ClientCallback]
+    private void Awake()
+    {
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        startPosition = transform.position;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    [ClientCallback]
+    private void Update()
+    {
+        if (!isOwned) return;
+
+        CmdJump();
+        CmdMouseMovement();
+        CmdCheckFallPosition();
+    }
+
+    [ClientCallback]
+    private void FixedUpdate()
+    {
+        if (!isOwned) return;
+
+        CmdPlayerMove();
+    }
+
+    [ClientCallback]
     private void OnCollisionEnter(Collision collision)
     {
+        if (!isOwned) return;
+
         if (isGrounded) return;
 
         if (collision.gameObject.CompareTag("Ground"))
@@ -106,10 +127,4 @@ public class CustomPlayerMovement : NetworkBehaviour
     }
 
     #endregion
-
-    private void CheckFallPosition()
-    {
-        if (transform.position.y < -5)
-            transform.position = startPosition;
-    }
 }
