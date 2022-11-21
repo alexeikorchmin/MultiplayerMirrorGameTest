@@ -1,7 +1,7 @@
 using UnityEngine;
-using Mirror;
-using TMPro;
 using Color = UnityEngine.Color;
+using TMPro;
+using Mirror;
 
 public class CustomNetworkPlayer : NetworkBehaviour
 {
@@ -14,7 +14,7 @@ public class CustomNetworkPlayer : NetworkBehaviour
     [SerializeField] private string playerName;
 
     [SyncVar(hook = nameof(PlayerColorUpdateHandler))]
-    [SerializeField] private Color playerColor = Color.black;
+    [SerializeField] private Color playerColor;
 
     private PlayerDisplayScoreData playerDisplayScoreData;
     private int playerScore;
@@ -26,15 +26,13 @@ public class CustomNetworkPlayer : NetworkBehaviour
     {
         playerDisplayScoreData = newPlayerDisplayScoreData;
         playerDisplayScoreData.SetGOValue(isActive);
-        playerDisplayScoreData.SetDisplayPlayerName(playerName);
         playerDisplayScoreData.SetDisplayPlayerScore(playerScore.ToString());
-        playerDisplayScoreData.SetDisplayPlayerDataColor(playerColor);
     }
 
     [Server]
     public void SetPlayerName(string newPlayerName)
     {
-        playerName = newPlayerName;
+        playerName = newPlayerName;        
     }
 
     [Server]
@@ -43,40 +41,67 @@ public class CustomNetworkPlayer : NetworkBehaviour
         playerColor = newPlayerColor;
     }
 
-    [Command]
-    private void CmdSetPlayerName(string newPlayerName)
+    private void Awake()
     {
-        if (newPlayerName.Length < 2 || newPlayerName.Length > 20) return;
+        GlobalScoreManager.OnPlayerWinLose += OnPlayerWinLoseHandler;
+    }
 
-        RpcShowNewName(newPlayerName);
-        SetPlayerName(newPlayerName);
+    private void OnDestroy()
+    {
+        GlobalScoreManager.OnPlayerWinLose -= OnPlayerWinLoseHandler;
+    }
+
+    private void OnPlayerWinLoseHandler(int winnerIndex, int loserIndex)
+    {
+        if (playerIndex == winnerIndex)
+            WinBattle();
+        if (playerIndex == loserIndex)
+            LoseBattle();
+    }
+
+    [Command]
+    private void CmdWinBattle()
+    {
+        playerScore++;
+    }
+
+    [Command]
+    private void CmdLoseBattle()
+    {
+        SetPlayerColor(Color.black);
     }
 
     #endregion
 
-    #region Cliend
+    #region Client
 
     private void PlayerNameUpdateHandler(string oldName, string newName)
     {
         playerNameText.text = newName;
+
+        if (playerDisplayScoreData == null) return;
+
+        playerDisplayScoreData.SetDisplayPlayerName(newName);
     }
 
     private void PlayerColorUpdateHandler(Color oldColor, Color newColor)
     {
         colorRenderer.material.color = newColor;
         playerNameText.color = newColor;
+
+        if (playerDisplayScoreData == null) return;
+
+        playerDisplayScoreData.SetDisplayPlayerDataColor(newColor);
     }
 
-    [ContextMenu("Set New Name")]
-    private void SetNewName()
+    private void WinBattle()
     {
-        CmdSetPlayerName("Player New Name");
+        CmdWinBattle();
     }
 
-    [ClientRpc]
-    private void RpcShowNewName(string newName)
+    private void LoseBattle()
     {
-        Debug.Log(newName);
+        CmdLoseBattle();
     }
 
     #endregion

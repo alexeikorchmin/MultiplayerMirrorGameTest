@@ -1,6 +1,6 @@
 using UnityEngine;
-using Mirror;
 using Cinemachine;
+using Mirror;
 
 public class CustomPlayerMovement : NetworkBehaviour
 {

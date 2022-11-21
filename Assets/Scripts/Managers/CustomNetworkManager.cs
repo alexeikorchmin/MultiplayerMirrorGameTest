@@ -18,7 +18,11 @@ public class CustomNetworkManager : NetworkManager
         if (!CheckIsEmptySpace(playerDisplayScoreDatas)) return;
 
         CustomNetworkPlayer player = conn.identity.GetComponent<CustomNetworkPlayer>();
-        player.SetPlayerName($"Player {numPlayers}");
+        player.playerIndex = playerIndex;
+        PlayerDisplayScoreData playerDisplayScoreData = playerDisplayScoreDatas[playerIndex];
+        player.SetPlayerDisplayScoreData(playerDisplayScoreData, true);
+
+        player.SetPlayerName($"Player {playerIndex}");
 
         Color color = new Color(
             Random.Range(0f, 1f),
@@ -26,8 +30,6 @@ public class CustomNetworkManager : NetworkManager
             Random.Range(0f, 1f));
 
         player.SetPlayerColor(color);
-        PlayerDisplayScoreData playerDisplayScoreData = playerDisplayScoreDatas[playerIndex];
-        player.SetPlayerDisplayScoreData(playerDisplayScoreData, true);
     }
 
     private bool CheckIsEmptySpace(List<PlayerDisplayScoreData> list)
