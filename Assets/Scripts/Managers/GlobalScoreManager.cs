@@ -5,8 +5,8 @@ using Mirror;
 
 public class GlobalScoreManager : NetworkBehaviour
 {
-    public static Action<int, int> OnPlayerWinLose;
-    public static Action OnRestartGame;
+    public static event Action<int, int> OnPlayerWinLose;
+    public static event Action<int> OnGameOver;
 
     [SerializeField] PlayerDisplayScoreDataList playerDisplayScoreDataList;
 
@@ -60,13 +60,9 @@ public class GlobalScoreManager : NetworkBehaviour
     private void SaveWinnerScore(int winnerIndex)
     {
         if (playersScores.ContainsKey(winnerIndex))
-        {
             playersScores[winnerIndex]++;
-        }
         else
-        {
             playersScores.Add(winnerIndex, 1);
-        }
 
         ShowUpdatedScore(winnerIndex);
     }
@@ -81,11 +77,25 @@ public class GlobalScoreManager : NetworkBehaviour
     {
         foreach (var player in playersScores)
         {
+            print($"player{player.Key} has {player.Value} scores");
+            
             if (player.Value == 3)
             {
-                OnRestartGame?.Invoke();
+                OnGameOver?.Invoke(player.Key);
+                ResetAndUpdatePlayersScores();
                 break;
             }
+        }
+    }
+
+    private void ResetAndUpdatePlayersScores()
+    {
+        playersBlinkDatas.Clear();
+
+        for (int i = 0; i < playersScores.Count; i++)
+        {
+            playersScores[i] = 0;
+            ShowUpdatedScore(i);
         }
     }
 }

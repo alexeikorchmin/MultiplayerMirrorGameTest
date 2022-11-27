@@ -1,5 +1,4 @@
 using UnityEngine;
-using Cinemachine;
 using Mirror;
 
 public class CustomPlayerMovement : NetworkBehaviour
@@ -8,8 +7,8 @@ public class CustomPlayerMovement : NetworkBehaviour
     [SerializeField] private float jumpValue = 4f;
     [SerializeField] private float maxSpeed = 5f;
     [SerializeField] private float mouseSensitivity = 5f;
-    [SerializeField] private CinemachineVirtualCamera playerCamera;
     [SerializeField] private Rigidbody rb;
+    [SerializeField] private GameObject cameraHolder;
 
     private Vector3 startPosition;
     private Vector3 movementDirection;
@@ -17,6 +16,7 @@ public class CustomPlayerMovement : NetworkBehaviour
     private float verticalMovement;
     private KeyCode jumpKey = KeyCode.Space;
     private bool isGrounded = true;
+    private bool canMove = true;
 
     private float mouseX;
     private float mouseY;
@@ -24,41 +24,136 @@ public class CustomPlayerMovement : NetworkBehaviour
     private float yRotation;
     private float maxLook = 60f;
 
+    [SerializeField] private PlayerBlink playerBlink;
+    [SerializeField] private CustomNetworkPlayer player;
+    private bool isBlinking;
+
+    public Vector3 GetMoveDirection()
+    {
+        return movementDirection;
+    }
+
     #region Server
 
     [Command]
-    private void CmdPlayerMove()
+    private void CmdMovePlayer(float horizontal, float vertical)
     {
-        horizontalMovement = Input.GetAxis("Horizontal");
-        verticalMovement = Input.GetAxis("Vertical");
-
-        if (Mathf.Approximately(horizontalMovement, 0f) &&
-            Mathf.Approximately(verticalMovement, 0f) &&
-            isGrounded)
-        {
-            rb.velocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-        }
-        else if (Mathf.Abs(rb.velocity.x) < maxSpeed &&
-                 Mathf.Abs(rb.velocity.y) < maxSpeed &&
-                 Mathf.Abs(rb.velocity.z) < maxSpeed)
-        {
-            movementDirection = transform.forward * verticalMovement + transform.right * horizontalMovement;
-            rb.AddForce(movementDirection.normalized * speedValue, ForceMode.VelocityChange);
-        }
+        RpcMovePlayer(horizontal, vertical);
     }
 
     [Command]
     private void CmdJump()
     {
-        if (!Input.GetKeyDown(jumpKey) || !isGrounded) return;
-
-        rb.AddForce(Vector3.up * jumpValue, ForceMode.VelocityChange);
-        isGrounded = false;
+        RpcJump();
     }
 
     [Command]
-    private void CmdMouseMovement()
+    private void CmdMouseMovement(float rotationY)
+    {
+        transform.rotation = Quaternion.Euler(0, rotationY, 0);
+    }
+
+    [Command]
+    private void CmdChangeIsGroundState()
+    {
+        RpcChangeIsGroundState();
+    }
+
+    [Command]
+    private void CmdCheckFallPosition(GameObject go)
+    {
+        go.transform.position = startPosition;
+    }
+
+    #endregion
+
+    #region Client
+
+    [ClientCallback]
+    private void Awake()
+    {
+        RestartGameManager.OnCanMove += OnCanMoveHandler;
+
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        startPosition = transform.position;
+        Cursor.lockState = CursorLockMode.Confined;
+    }
+
+    [ClientCallback]
+    private void OnDestroy()
+    {
+        RestartGameManager.OnCanMove -= OnCanMoveHandler;
+    }
+
+    private void Start()
+    {
+        SetPlayerCamera();
+    }
+
+    private void SetPlayerCamera()
+    {
+        if (!isLocalPlayer) return;
+
+        Transform cameraTransform = Camera.main.gameObject.transform;
+        cameraTransform.parent = cameraHolder.transform;
+        cameraTransform.position = cameraHolder.transform.position;
+        cameraTransform.rotation = cameraHolder.transform.rotation;
+    }
+
+    [ClientCallback]
+    private void Update()
+    {
+        if (!isOwned) return;
+
+        Jump();
+        MouseMovement();
+        CheckFallPosition();
+    }
+
+    [ClientCallback]
+    private void FixedUpdate()
+    {
+        if (!isOwned) return;
+
+        MovePlayer();
+    }
+
+    [ClientCallback]
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (!isOwned) return;
+
+        if (!isLocalPlayer) return;
+
+        if (isGrounded) return;
+
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            CmdChangeIsGroundState();
+        }
+    }
+
+    private void MovePlayer()
+    {
+        //if (!canMove) return;
+
+        if (!isLocalPlayer) return;
+
+        horizontalMovement = Input.GetAxis("Horizontal");
+        verticalMovement = Input.GetAxis("Vertical");
+        CmdMovePlayer(horizontalMovement, verticalMovement);
+    }
+
+    private void Jump()
+    {
+        if (!isLocalPlayer) return;
+
+        if (!Input.GetKeyDown(jumpKey) || !isGrounded) return;
+
+        CmdJump();
+    }
+
+    private void MouseMovement()
     {
         mouseX = Input.GetAxisRaw("Mouse X");
         mouseY = Input.GetAxisRaw("Mouse Y");
@@ -67,62 +162,65 @@ public class CustomPlayerMovement : NetworkBehaviour
         yRotation += mouseX * mouseSensitivity;
 
         xRotation = Mathf.Clamp(xRotation, -maxLook, maxLook);
-
-        playerCamera.transform.localRotation = Quaternion.Euler(xRotation, 0, 0);
-        transform.rotation = Quaternion.Euler(0, yRotation, 0);
+        cameraHolder.transform.localRotation = Quaternion.Euler(xRotation, 0, 0);
+        CmdMouseMovement(yRotation);
     }
 
-    [Command]
-    private void CmdCheckFallPosition()
+    private void CheckFallPosition()
     {
         if (transform.position.y < -5)
-            transform.position = startPosition;
+            CmdCheckFallPosition(gameObject);
     }
 
-    #endregion
-
-    #region Client
-
-    public Vector3 GetMoveDirection()
+    [ClientRpc]
+    private void RpcMovePlayer(float horizontal, float vertical)
     {
-        return movementDirection;
+        isBlinking = playerBlink.GetIsBlinking();
+        if (isBlinking) return;
+
+        if (Mathf.Approximately(horizontal, 0f) &&
+            Mathf.Approximately(vertical, 0f) &&
+            isGrounded == true)
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+        else if (Mathf.Abs(rb.velocity.x) < maxSpeed &&
+                 Mathf.Abs(rb.velocity.y) < maxSpeed &&
+                 Mathf.Abs(rb.velocity.z) < maxSpeed &&
+                 isBlinking == false)
+        {
+            movementDirection = transform.forward * vertical + transform.right * horizontal;
+            rb.AddForce(movementDirection.normalized * speedValue, ForceMode.VelocityChange);
+        }
     }
 
-    [ClientCallback]
-    private void Awake()
+    [ClientRpc]
+    private void RpcJump()
     {
-        rb.constraints = RigidbodyConstraints.FreezeRotation;
-        startPosition = transform.position;
-        Cursor.lockState = CursorLockMode.Locked;
+        rb.AddForce(Vector3.up * jumpValue, ForceMode.VelocityChange);
+        isGrounded = false;
     }
 
-    [ClientCallback]
-    private void Update()
+    [ClientRpc]
+    private void RpcChangeIsGroundState()
     {
-        if (!isOwned) return;
-
-        CmdJump();
-        CmdMouseMovement();
-        CmdCheckFallPosition();
+        isGrounded = true;
     }
 
-    [ClientCallback]
-    private void FixedUpdate()
+    private void OnCanMoveHandler(bool canMove)
     {
-        if (!isOwned) return;
-
-        CmdPlayerMove();
+        RpcOnCanMoveHandler(canMove);
     }
 
-    [ClientCallback]
-    private void OnCollisionEnter(Collision collision)
+    private void RpcOnCanMoveHandler(bool canMove)
     {
-        if (!isOwned) return;
+        print($"Before player{player.playerIndex} canMove = {canMove}");
+        
+        if (!isLocalPlayer) return;
 
-        if (isGrounded) return;
-
-        if (collision.gameObject.CompareTag("Ground"))
-            isGrounded = true;
+        this.canMove = canMove;
+        print($"After player{player.playerIndex} canMove = {canMove}");
     }
 
     #endregion

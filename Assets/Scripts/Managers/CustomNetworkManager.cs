@@ -5,6 +5,7 @@ using Mirror;
 public class CustomNetworkManager : NetworkManager
 {
     [SerializeField] private PlayerDisplayScoreDataList playerDisplayScoreDataList;
+    [SerializeField] private RestartGameManager restartGameManager;
 
     private List<PlayerDisplayScoreData> playerDisplayScoreDatas = new List<PlayerDisplayScoreData>();
     private int playerIndex;
@@ -30,6 +31,7 @@ public class CustomNetworkManager : NetworkManager
             Random.Range(0f, 1f));
 
         player.SetPlayerColor(color);
+        restartGameManager.AddPlayerToList(player);
     }
 
     private bool CheckIsEmptySpace(List<PlayerDisplayScoreData> list)
