@@ -28,10 +28,30 @@ public class RestartGameManager : NetworkBehaviour
     }
 
     [Server]
-    public void AddPlayerToList(CustomNetworkPlayer player)
+    public void AddPlayerToList(CustomNetworkPlayer player, int index)
     {
-        players.Add(player);
+        players.Insert(index, player);
     }
+
+    //[Server]
+    //public int CheckPlayersLeftAndRemove()
+    //{
+    //    int playerLeftIndex = 100;
+        
+    //    if (players.Count == 0) return playerLeftIndex;
+
+    //    foreach (var player in players)
+    //    {
+    //        if (player == null)
+    //        {
+    //            playerLeftIndex = player.playerIndex;
+    //            players.Remove(player);
+    //            return playerLeftIndex;
+    //        }
+    //    }
+
+    //    return playerLeftIndex;
+    //}
 
     [Server]
     private void SetPlayersToSpawnPositions()
@@ -94,6 +114,7 @@ public class RestartGameManager : NetworkBehaviour
 
     private IEnumerator WaitForRestartingGame()
     {
+        yield return new WaitForSeconds(countdownInitValue);
         GameOverPanel.SetActive(true);
         canCountdown = true;
         yield return new WaitForSeconds(countdownInitValue);

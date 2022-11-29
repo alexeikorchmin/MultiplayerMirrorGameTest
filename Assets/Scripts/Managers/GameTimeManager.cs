@@ -11,7 +11,7 @@ public class GameTimeManager : NetworkBehaviour
     }
 
     [Server]
-    private void Update()
+    private void FixedUpdate()
     {
         gameTime += Time.deltaTime;
     }

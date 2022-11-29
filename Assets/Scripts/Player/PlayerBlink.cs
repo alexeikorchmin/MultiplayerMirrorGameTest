@@ -12,43 +12,29 @@ public class PlayerBlink : NetworkBehaviour
     [SerializeField] private CustomNetworkPlayer player;
     [SerializeField] private CustomPlayerMovement customPlayerMovement;
     [SerializeField] private Rigidbody rb;
+    [SerializeField] private TMP_Text blinkCooldownText;
     [SerializeField] private float blinkDistance = 20f;
-    [SerializeField] private float blinkCooldownInitValue = 3f;
+    [SerializeField] private float blinkCooldownValue = 3f;
     [SerializeField] private float blinkDuration = 1f;
 
-    [SyncVar(hook = nameof(UpdateCDText))]
-    private float blinkCooldown;
+    [SyncVar(hook = nameof(BlinkCooldownUpdateHandler))]
+    private float currentBlinkCooldown;
 
     private float blinkClickTime = 0;
+    private float blinkIsReady;
     private bool isBlinking;
-    private static int playerIndex;
     private KeyCode blinkKey = KeyCode.Mouse0;
     private Vector3 moveDirection;
 
-    [SerializeField] private TMP_Text blinkCooldownText;
+    #region Server
 
-    public void SetBlinkColor(Color newColor)
-    {
-        blinkCooldownText.color = newColor;
-    }
-
+    [Server]
     public bool GetIsBlinking()
     {
-        //print($"Player {player.playerIndex} GetIsBlinking = {isBlinking}");
         return isBlinking;
     }
 
-    private void Awake()
-    {
-        GlobalScoreManager.OnGameOver += OnGameOverHandler;
-        playerIndex = player.playerIndex;
-    }
-
-    private void OnDestroy()
-    {
-        GlobalScoreManager.OnGameOver -= OnGameOverHandler;
-    }
-
+    [Server]
     private void OnCollisionEnter(Collision collision)
     {
         if (!isBlinking) return;
@@ -57,85 +43,91 @@ public class PlayerBlink : NetworkBehaviour
         {
             collision.gameObject.TryGetComponent(out CustomNetworkPlayer enemy);
 
+            if (player.playerIndex == enemy.playerIndex) return;
+
             if (!enemy.GetCanAttack()) return;
 
-            OnPlayerHit?.Invoke(playerIndex, enemy.playerIndex);
+            OnPlayerHit?.Invoke(player.playerIndex, enemy.playerIndex);
         }
     }
 
     [Command]
     private void CmdBlink()
     {
-        RpcBlink();
+        if (currentBlinkCooldown > 0) return;
+
+        if ((int)rb.velocity.x == 0 &&
+            (int)rb.velocity.z == 0)
+        {
+            return;
+        }
+
+        isBlinking = true;
+        blinkClickTime = GameTimeManager.GetGameTime();
+        blinkIsReady = blinkClickTime + blinkCooldownValue;
+        OnPlayerBlinked?.Invoke(player.playerIndex, blinkClickTime);
+        moveDirection = customPlayerMovement.GetMoveDirection();
+        rb.AddForce(moveDirection.normalized * blinkDistance, ForceMode.VelocityChange);
+        currentBlinkCooldown = blinkIsReady;
+        StartCoroutine(ReduceBlinkSpeed());
     }
 
     [Command]
-    private void CmdCheckCooldownTime()
+    private void CmdCheckBlinkCooldownTime()
     {
-        RpcCheckCooldownTime();
+        if (currentBlinkCooldown == 0) return;
+
+        currentBlinkCooldown = blinkIsReady - GameTimeManager.GetGameTime();
+
+        if (currentBlinkCooldown < 0)
+            currentBlinkCooldown = 0;
+    }
+
+    #endregion
+
+    #region Client
+
+    private void Awake()
+    {
+        GlobalScoreManager.OnGameOver += OnGameOverHandler;
+    }
+
+    private void OnDestroy()
+    {
+        GlobalScoreManager.OnGameOver -= OnGameOverHandler;
     }
 
     [ClientCallback]
     private void Update()
     {
-        if (!isOwned) return;
-
         Blink();
+        CheckBlinkCooldownTime();
     }
 
-    [ClientCallback]
-    private void FixedUpdate()
+    private void RpcInit()
     {
-        if (!isOwned) return;
+        StopAllCoroutines();
+        currentBlinkCooldown = 0;
+    }
 
-        CheckCooldownTime();
+    public void SetBlinkColor(Color newColor)
+    {
+        blinkCooldownText.color = newColor;
     }
 
     private void Blink()
     {
-        if (!isLocalPlayer) return;
-
         if (!Input.GetKeyDown(blinkKey)) return;
 
         CmdBlink();
     }
 
-    [ClientRpc]
-    private void RpcBlink()
+    private void CheckBlinkCooldownTime()
     {
-        if (blinkCooldown > 0f) return;
-
-        if (rb.velocity == Vector3.zero) return;
-
-        isBlinking = true;
-        blinkClickTime = GameTimeManager.GetGameTime();
-        OnPlayerBlinked?.Invoke(playerIndex, blinkClickTime);
-        moveDirection = customPlayerMovement.GetMoveDirection();
-        rb.AddForce(moveDirection.normalized * blinkDistance, ForceMode.VelocityChange);
-        blinkCooldown = blinkCooldownInitValue;
-        StartCoroutine(ReduceBlinkSpeed());
+        CmdCheckBlinkCooldownTime();
     }
 
-    private void CheckCooldownTime()
-    {
-        CmdCheckCooldownTime();
-    }
-
-    [ClientRpc]
-    private void RpcCheckCooldownTime()
-    {
-        if (blinkCooldown == 0)
-        {
-            return;
-        }
-
-        blinkCooldown -= Time.deltaTime;
-
-        if (blinkCooldown < 0)
-            blinkCooldown = 0f;
-    }
-
-    private void UpdateCDText(float oldValue, float newValue)
+    private void BlinkCooldownUpdateHandler(float oldValue, float newValue)
     {
         blinkCooldownText.text = $"{Math.Round(newValue, 1)}";
     }
@@ -153,12 +145,5 @@ public class PlayerBlink : NetworkBehaviour
         RpcInit();
     }
 
-    [ClientRpc]
-    private void RpcInit()
-    {
-        if (!isLocalPlayer) return;
-
-        StopAllCoroutines();
-        blinkCooldown = blinkCooldownInitValue;
-    }
+    #endregion
 }

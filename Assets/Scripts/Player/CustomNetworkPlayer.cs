@@ -23,17 +23,19 @@ public class CustomNetworkPlayer : NetworkBehaviour
     private Color previousColor;
     private bool canAttack = true;
 
+    #region Server
+
+    [Server]
     public string GetPlayerName()
     {
         return playerName;
     }
 
+    [Server]
     public bool GetCanAttack()
     {
         return canAttack;
     }
-
-    #region Server
 
     [Server]
     public void SetPlayerDisplayScoreData(PlayerDisplayScoreData newPlayerDisplayScoreData, bool isActive)
@@ -54,24 +56,22 @@ public class CustomNetworkPlayer : NetworkBehaviour
         playerColor = newPlayerColor;
     }
 
+    #endregion
+
+    #region Client
+
     private void Awake()
     {
-        GlobalScoreManager.OnPlayerWinLose += OnPlayerWinLoseHandler;
+        GlobalScoreManager.OnPlayerWinLose += RpcOnPlayerWinLoseHandler;
         GlobalScoreManager.OnGameOver += OnGameOverHandler;
     }
 
     private void OnDestroy()
     {
-        GlobalScoreManager.OnPlayerWinLose -= OnPlayerWinLoseHandler;
+        GlobalScoreManager.OnPlayerWinLose -= RpcOnPlayerWinLoseHandler;
         GlobalScoreManager.OnGameOver -= OnGameOverHandler;
-    }
 
-    private void OnPlayerWinLoseHandler(int winnerIndex, int loserIndex)
-    {
-        if (playerIndex == winnerIndex)
-            RpcWinBattle();
-        if (playerIndex == loserIndex)
-            RpcLoseBattle();
+        playerDisplayScoreData.SetGOValue(false);
     }
 
     private void OnGameOverHandler(int winnerIndex)
@@ -82,27 +82,22 @@ public class CustomNetworkPlayer : NetworkBehaviour
     [ClientRpc]
     private void RpcInit()
     {
-        if (!isLocalPlayer) return;
-
         StopAllCoroutines();
         SetPlayerColor(previousColor);
         canAttack = true;
     }
 
-    [ContextMenu("Set New Index")]
-    private void SetNewIndex()
+    [ClientRpc]
+    private void RpcOnPlayerWinLoseHandler(int winnerIndex, int loserIndex)
     {
-        playerIndex = 2;
+        if (playerIndex == winnerIndex)
+            WinBattle();
+        if (playerIndex == loserIndex)
+            LoseBattle();
     }
-
-    #endregion
-
-    #region Client
 
     private void PlayerNameUpdateHandler(string oldName, string newName)
     {
-        if (!isLocalPlayer) return;
-
         playerNameText.text = newName;
 
         if (playerDisplayScoreData != null)
@@ -119,17 +114,14 @@ public class CustomNetworkPlayer : NetworkBehaviour
             playerDisplayScoreData.SetDisplayPlayerDataColor(newColor);
     }
 
-    [ClientRpc]
-    private void RpcWinBattle()
+    private void WinBattle()
     {
-        Debug.Log($"Player {playerName} Index {playerIndex} Wins Battle");
+        Debug.Log($"Player {playerName} Won Battle");
     }
 
-    [ClientRpc]
-    private void RpcLoseBattle()
+    private void LoseBattle()
     {
-        if (!isLocalPlayer) return;
-
+        Debug.Log($"Player {playerName} Lost Battle");
         previousColor = playerColor;
         SetPlayerColor(Color.black);
         canAttack = false;

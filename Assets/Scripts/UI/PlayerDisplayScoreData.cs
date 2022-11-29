@@ -25,6 +25,8 @@ public class PlayerDisplayScoreData : NetworkBehaviour
         return go.activeSelf;
     }
 
+    #region Server
+
     [Server]
     public void SetDisplayPlayerName(string name)
     {
@@ -49,6 +51,10 @@ public class PlayerDisplayScoreData : NetworkBehaviour
         isGOActive = isActive;
     }
 
+    #endregion
+
+    #region Client
+
     private void UpdatedColor(Color oldColor, Color newColor)
     {
         playerNameText.color = newColor;
@@ -69,4 +75,6 @@ public class PlayerDisplayScoreData : NetworkBehaviour
     {
         go.SetActive(newState);
     }
+
+    #endregion
 }

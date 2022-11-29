@@ -10,11 +10,18 @@ public class CustomNetworkManager : NetworkManager
     private List<PlayerDisplayScoreData> playerDisplayScoreDatas = new List<PlayerDisplayScoreData>();
     private int playerIndex;
 
+    public override void Awake()
+    {
+        base.Awake();
+        playerDisplayScoreDatas = playerDisplayScoreDataList.GetDisplayScoreDataList();
+    }
+
+    [Server]
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
     {
         base.OnServerAddPlayer(conn);
 
-        playerDisplayScoreDatas = playerDisplayScoreDataList.GetDisplayScoreDataList();
+        //UpdatePlayerDisplayScoreDataList();
 
         if (!CheckIsEmptySpace(playerDisplayScoreDatas)) return;
 
@@ -26,13 +33,24 @@ public class CustomNetworkManager : NetworkManager
         player.SetPlayerName($"Player {playerIndex}");
 
         Color color = new Color(
-            Random.Range(0f, 1f),
-            Random.Range(0f, 1f),
-            Random.Range(0f, 1f));
+            UnityEngine.Random.Range(0f, 1f),
+            UnityEngine.Random.Range(0f, 1f),
+            UnityEngine.Random.Range(0f, 1f));
 
         player.SetPlayerColor(color);
-        restartGameManager.AddPlayerToList(player);
+        restartGameManager.AddPlayerToList(player, playerIndex);
     }
+
+    //private void UpdatePlayerDisplayScoreDataList()
+    //{
+    //    int playerLeft = restartGameManager.CheckPlayersLeftAndRemove();
+
+    //    if (playerLeft > playerDisplayScoreDatas.Count - 1) return;
+
+    //    playerDisplayScoreDatas[playerLeft].SetGOValue(false);
+
+    //    print("After UpdatePlayerDisplayScoreDataList");
+    //}
 
     private bool CheckIsEmptySpace(List<PlayerDisplayScoreData> list)
     {
@@ -44,6 +62,7 @@ public class CustomNetworkManager : NetworkManager
                 return true;
             }
         }
+
         return false;
     }
 }

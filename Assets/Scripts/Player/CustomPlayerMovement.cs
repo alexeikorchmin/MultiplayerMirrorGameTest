@@ -35,9 +35,27 @@ public class CustomPlayerMovement : NetworkBehaviour
 
     #region Server
 
+    public override void OnStartAuthority()
+    {
+        SetPlayerCamera();
+    }
+
+    [Server]
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (isGrounded) return;
+
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = true;
+        }
+    }
+
     [Command]
     private void CmdMovePlayer(float horizontal, float vertical)
     {
+        if (!canMove) return;
+
         isBlinking = playerBlink.GetIsBlinking();
 
         if (isBlinking) return;
@@ -62,6 +80,10 @@ public class CustomPlayerMovement : NetworkBehaviour
     [Command]
     private void CmdJump()
     {
+        if (!canMove) return;
+
+        if (!isGrounded) return;
+
         rb.AddForce(Vector3.up * jumpValue, ForceMode.VelocityChange);
         isGrounded = false;
     }
@@ -75,7 +97,8 @@ public class CustomPlayerMovement : NetworkBehaviour
     [Command]
     private void CmdCheckFallPosition(GameObject go)
     {
-        go.transform.position = startPosition;
+        if (transform.position.y < -5)
+            go.transform.position = startPosition;
     }
 
     #endregion
@@ -96,57 +119,34 @@ public class CustomPlayerMovement : NetworkBehaviour
         RestartGameManager.OnCanMove -= OnCanMoveHandler;
     }
 
-    private void Start()
-    {
-        SetPlayerCamera();
-    }
-
     private void SetPlayerCamera()
     {
-        if (!isLocalPlayer) return;
-
         Transform cameraTransform = Camera.main.gameObject.transform;
         cameraTransform.parent = cameraHolder.transform;
         cameraTransform.position = cameraHolder.transform.position;
         cameraTransform.rotation = cameraHolder.transform.rotation;
     }
 
+    [ClientCallback]
     private void Update()
     {
-        if (!isOwned) return;
+        if (!hasAuthority) return;
 
         Jump();
         MouseMovement();
         CheckFallPosition();
     }
 
+    [ClientCallback]
     private void FixedUpdate()
     {
-        if (!isOwned) return;
+        if (!hasAuthority) return;
 
         MovePlayer();
     }
 
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (!isOwned) return;
-
-        if (!isLocalPlayer) return;
-
-        if (isGrounded) return;
-
-        if (collision.gameObject.CompareTag("Ground"))
-        {
-            isGrounded = true;
-        }
-    }
-
     private void MovePlayer()
     {
-        if (!canMove) return;
-
-        if (!isLocalPlayer) return;
-
         horizontalMovement = Input.GetAxis("Horizontal");
         verticalMovement = Input.GetAxis("Vertical");
         CmdMovePlayer(horizontalMovement, verticalMovement);
@@ -154,17 +154,13 @@ public class CustomPlayerMovement : NetworkBehaviour
 
     private void Jump()
     {
-        if (!isLocalPlayer) return;
-
-        if (!Input.GetKeyDown(jumpKey) || !isGrounded) return;
+        if (!Input.GetKeyDown(jumpKey)) return;
 
         CmdJump();
     }
 
     private void MouseMovement()
     {
-        if (!isLocalPlayer) return;
-        
         mouseX = Input.GetAxisRaw("Mouse X");
         mouseY = Input.GetAxisRaw("Mouse Y");
 
@@ -178,16 +174,17 @@ public class CustomPlayerMovement : NetworkBehaviour
 
     private void CheckFallPosition()
     {
-        if (!isLocalPlayer) return;
-
-        if (transform.position.y < -5)
-            CmdCheckFallPosition(gameObject);
+        CmdCheckFallPosition(gameObject);
     }
-    
+
     private void OnCanMoveHandler(bool canMove)
     {
-        if (!isLocalPlayer) return;
+        RpcOnCanMoveHandler(canMove);
+    }
 
+    [ClientRpc]
+    private void RpcOnCanMoveHandler(bool canMove)
+    {
         this.canMove = canMove;
     }
 
