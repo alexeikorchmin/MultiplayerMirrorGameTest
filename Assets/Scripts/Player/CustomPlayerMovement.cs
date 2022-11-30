@@ -9,6 +9,7 @@ public class CustomPlayerMovement : NetworkBehaviour
     [SerializeField] private float mouseSensitivity = 5f;
     [SerializeField] private Rigidbody rb;
     [SerializeField] private GameObject cameraHolder;
+    [SerializeField] private PlayerBlink playerBlink;
 
     private Vector3 startPosition;
     private Vector3 movementDirection;
@@ -17,6 +18,7 @@ public class CustomPlayerMovement : NetworkBehaviour
     private KeyCode jumpKey = KeyCode.Space;
     private bool isGrounded = true;
     private bool canMove = true;
+    private bool isBlinking;
 
     private float mouseX;
     private float mouseY;
@@ -24,20 +26,12 @@ public class CustomPlayerMovement : NetworkBehaviour
     private float yRotation;
     private float maxLook = 60f;
 
-    [SerializeField] private PlayerBlink playerBlink;
-    [SerializeField] private CustomNetworkPlayer player;
-    private bool isBlinking;
+    #region Server
 
+    [Server]
     public Vector3 GetMoveDirection()
     {
         return movementDirection;
-    }
-
-    #region Server
-
-    public override void OnStartAuthority()
-    {
-        SetPlayerCamera();
     }
 
     [Server]
@@ -49,6 +43,12 @@ public class CustomPlayerMovement : NetworkBehaviour
         {
             isGrounded = true;
         }
+    }
+
+    [Command]
+    private void CmdInit(bool canMove)
+    {
+        RpcInit(canMove);
     }
 
     [Command]
@@ -105,6 +105,11 @@ public class CustomPlayerMovement : NetworkBehaviour
 
     #region Client
 
+    public override void OnStartAuthority()
+    {
+        SetPlayerCamera();
+    }
+
     private void Awake()
     {
         RestartGameManager.OnCanMove += OnCanMoveHandler;
@@ -117,14 +122,6 @@ public class CustomPlayerMovement : NetworkBehaviour
     private void OnDestroy()
     {
         RestartGameManager.OnCanMove -= OnCanMoveHandler;
-    }
-
-    private void SetPlayerCamera()
-    {
-        Transform cameraTransform = Camera.main.gameObject.transform;
-        cameraTransform.parent = cameraHolder.transform;
-        cameraTransform.position = cameraHolder.transform.position;
-        cameraTransform.rotation = cameraHolder.transform.rotation;
     }
 
     [ClientCallback]
@@ -143,6 +140,20 @@ public class CustomPlayerMovement : NetworkBehaviour
         if (!hasAuthority) return;
 
         MovePlayer();
+    }
+
+    [ClientRpc]
+    private void RpcInit(bool canMove)
+    {
+        this.canMove = canMove;
+    }
+
+    private void SetPlayerCamera()
+    {
+        Transform cameraTransform = Camera.main.gameObject.transform;
+        cameraTransform.parent = cameraHolder.transform;
+        cameraTransform.position = cameraHolder.transform.position;
+        cameraTransform.rotation = cameraHolder.transform.rotation;
     }
 
     private void MovePlayer()
@@ -179,13 +190,7 @@ public class CustomPlayerMovement : NetworkBehaviour
 
     private void OnCanMoveHandler(bool canMove)
     {
-        RpcOnCanMoveHandler(canMove);
-    }
-
-    [ClientRpc]
-    private void RpcOnCanMoveHandler(bool canMove)
-    {
-        this.canMove = canMove;
+        CmdInit(canMove);
     }
 
     #endregion

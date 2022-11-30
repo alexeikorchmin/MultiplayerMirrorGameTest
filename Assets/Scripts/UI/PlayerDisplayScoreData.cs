@@ -20,12 +20,13 @@ public class PlayerDisplayScoreData : NetworkBehaviour
     [SyncVar(hook = nameof(UpdatedColor))]
     private Color color;
 
+    #region Server
+
+    [Server]
     public bool GetGOValue()
     {
         return go.activeSelf;
     }
-
-    #region Server
 
     [Server]
     public void SetDisplayPlayerName(string name)

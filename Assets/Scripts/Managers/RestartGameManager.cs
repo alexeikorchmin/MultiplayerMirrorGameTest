@@ -14,44 +14,22 @@ public class RestartGameManager : NetworkBehaviour
     [SerializeField] private TMP_Text countdownText;
     [SerializeField] private float countdownInitValue;
     [SerializeField] private List<Transform> spawnPositions = new List<Transform>();
+    [SerializeField] private GlobalScoreManager globalScoreManager;
+
+    [SyncVar(hook = nameof(UpdateWinnerName))]
+    private string winnerName;
 
     private List<CustomNetworkPlayer> players = new List<CustomNetworkPlayer>();
     private float countdownValue;
     private bool canCountdown;
 
-    [SyncVar(hook = nameof(UpdateWinnerName))]
-    private string winnerName;
-
-    private void UpdateWinnerName(string oldWinner, string newWinner)
-    {
-        winnerNameText.text = $"Winner is {newWinner}";
-    }
+    #region Server
 
     [Server]
     public void AddPlayerToList(CustomNetworkPlayer player, int index)
     {
         players.Insert(index, player);
     }
-
-    //[Server]
-    //public int CheckPlayersLeftAndRemove()
-    //{
-    //    int playerLeftIndex = 100;
-        
-    //    if (players.Count == 0) return playerLeftIndex;
-
-    //    foreach (var player in players)
-    //    {
-    //        if (player == null)
-    //        {
-    //            playerLeftIndex = player.playerIndex;
-    //            players.Remove(player);
-    //            return playerLeftIndex;
-    //        }
-    //    }
-
-    //    return playerLeftIndex;
-    //}
 
     [Server]
     private void SetPlayersToSpawnPositions()
@@ -61,26 +39,6 @@ public class RestartGameManager : NetworkBehaviour
             var random = UnityEngine.Random.Range(0, spawnPositions.Count);
             player.transform.position = spawnPositions[random].position;
         }
-    }
-
-    private void Awake()
-    {
-        GlobalScoreManager.OnGameOver += OnGameOverHandler;
-        GameOverPanel.SetActive(false);
-        countdownValue = countdownInitValue;
-    }
-
-    private void OnDestroy()
-    {
-        GlobalScoreManager.OnGameOver -= OnGameOverHandler;
-    }
-
-    private void Update()
-    {
-        if (!canCountdown) return;
-
-        countdownText.text = ((int)countdownValue).ToString();
-        countdownValue -= Time.deltaTime;
     }
 
     [Server]
@@ -94,28 +52,56 @@ public class RestartGameManager : NetworkBehaviour
                 return;
             }
         }
+    }
+        
+    #endregion
 
-        return;
+    #region Client
+
+    private void Awake()
+    {
+        GlobalScoreManager.OnGameOver += RpcOnGameOverHandler;
+        GameOverPanel.SetActive(false);
+        countdownValue = countdownInitValue;
     }
 
-    private void OnGameOverHandler(int winnerIndex)
+    private void OnDestroy()
     {
-        FindWinnerNameByIndex(winnerIndex);
-        RpcOnGameOverHandler(winnerIndex);
-        SetPlayersToSpawnPositions();
+        GlobalScoreManager.OnGameOver -= RpcOnGameOverHandler;
+    }
+
+    private void FixedUpdate()
+    {
+        Countdown();
+    }
+
+    private void Countdown()
+    {
+        if (!canCountdown) return;
+
+        countdownText.text = ((int)countdownValue).ToString();
+        countdownValue -= Time.deltaTime;
+    }
+
+    private void UpdateWinnerName(string oldWinner, string newWinner)
+    {
+        winnerNameText.text = $"Winner is {newWinner}";
     }
 
     [ClientRpc]
     private void RpcOnGameOverHandler(int winnerIndex)
     {
         OnCanMove?.Invoke(false);
+        FindWinnerNameByIndex(winnerIndex);
         StartCoroutine(WaitForRestartingGame());
     }
 
     private IEnumerator WaitForRestartingGame()
     {
         yield return new WaitForSeconds(countdownInitValue);
+        globalScoreManager.ResetAndUpdatePlayersScores();
         GameOverPanel.SetActive(true);
+        SetPlayersToSpawnPositions();
         canCountdown = true;
         yield return new WaitForSeconds(countdownInitValue);
         GameOverPanel.SetActive(false);
@@ -123,4 +109,6 @@ public class RestartGameManager : NetworkBehaviour
         countdownValue = countdownInitValue;
         OnCanMove?.Invoke(true);
     }
+
+    #endregion
 }

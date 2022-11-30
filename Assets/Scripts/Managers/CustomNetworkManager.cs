@@ -21,8 +21,6 @@ public class CustomNetworkManager : NetworkManager
     {
         base.OnServerAddPlayer(conn);
 
-        //UpdatePlayerDisplayScoreDataList();
-
         if (!CheckIsEmptySpace(playerDisplayScoreDatas)) return;
 
         CustomNetworkPlayer player = conn.identity.GetComponent<CustomNetworkPlayer>();
@@ -41,17 +39,7 @@ public class CustomNetworkManager : NetworkManager
         restartGameManager.AddPlayerToList(player, playerIndex);
     }
 
-    //private void UpdatePlayerDisplayScoreDataList()
-    //{
-    //    int playerLeft = restartGameManager.CheckPlayersLeftAndRemove();
-
-    //    if (playerLeft > playerDisplayScoreDatas.Count - 1) return;
-
-    //    playerDisplayScoreDatas[playerLeft].SetGOValue(false);
-
-    //    print("After UpdatePlayerDisplayScoreDataList");
-    //}
-
+    [Server]
     private bool CheckIsEmptySpace(List<PlayerDisplayScoreData> list)
     {
         for (int i = 0; i < list.Count; i++)

@@ -6,7 +6,7 @@ using TMPro;
 
 public class PlayerBlink : NetworkBehaviour
 {
-    public static event Action<int, int> OnPlayerHit;
+    public static event Action<int, int, bool> OnPlayerHit;
     public static event Action<int, float> OnPlayerBlinked;
 
     [SerializeField] private CustomNetworkPlayer player;
@@ -39,16 +39,24 @@ public class PlayerBlink : NetworkBehaviour
     {
         if (!isBlinking) return;
 
+        if (player.GetCanBeAttacked() == false) return;
+
         if (collision.gameObject.CompareTag("Player"))
         {
             collision.gameObject.TryGetComponent(out CustomNetworkPlayer enemy);
 
             if (player.playerIndex == enemy.playerIndex) return;
 
-            if (!enemy.GetCanAttack()) return;
+            if (!enemy.GetCanBeAttacked()) return;
 
-            OnPlayerHit?.Invoke(player.playerIndex, enemy.playerIndex);
+            OnPlayerHit?.Invoke(player.playerIndex, enemy.playerIndex, enemy.GetIsBlinking());
         }
+    }
+
+    [Command]
+    private void CmdInit()
+    {
+        RpcInit();
     }
 
     [Command]
@@ -87,6 +95,11 @@ public class PlayerBlink : NetworkBehaviour
 
     #region Client
 
+    public void SetBlinkColor(Color newColor)
+    {
+        blinkCooldownText.color = newColor;
+    }
+
     private void Awake()
     {
         GlobalScoreManager.OnGameOver += OnGameOverHandler;
@@ -104,15 +117,17 @@ public class PlayerBlink : NetworkBehaviour
         CheckBlinkCooldownTime();
     }
 
+    [ClientRpc]
     private void RpcInit()
     {
         StopAllCoroutines();
         currentBlinkCooldown = 0;
+        isBlinking = false;
     }
 
-    public void SetBlinkColor(Color newColor)
+    private void OnGameOverHandler(int winnerIndex)
     {
-        blinkCooldownText.color = newColor;
+        CmdInit();
     }
 
     private void Blink()
@@ -138,11 +153,6 @@ public class PlayerBlink : NetworkBehaviour
         isBlinking = false;
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-    }
-
-    private void OnGameOverHandler(int winnerIndex)
-    {
-        RpcInit();
     }
 
     #endregion

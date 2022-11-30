@@ -8,10 +8,61 @@ public class GlobalScoreManager : NetworkBehaviour
     public static event Action<int, int> OnPlayerWinLose;
     public static event Action<int> OnGameOver;
 
-    [SerializeField] PlayerDisplayScoreDataList playerDisplayScoreDataList;
+    [SerializeField] private PlayerDisplayScoreDataList playerDisplayScoreDataList;
 
     private Dictionary<int, float> playersBlinkDatas = new Dictionary<int, float>();
     private Dictionary<int, int> playersScores = new Dictionary<int, int>();
+
+    #region Server
+
+    [Server]
+    public void ResetAndUpdatePlayersScores()
+    {
+        playersBlinkDatas.Clear();
+
+        for (int i = 0; i < playersScores.Count; i++)
+        {
+            playersScores[i] = 0;
+            ShowUpdatedScore(i);
+        }
+    }
+
+    [Server]
+    private void SaveAndShowWinnerScore(int winnerIndex)
+    {
+        if (playersScores.ContainsKey(winnerIndex))
+            playersScores[winnerIndex]++;
+        else
+            playersScores.Add(winnerIndex, 1);
+
+        ShowUpdatedScore(winnerIndex);
+    }
+
+    [Server]
+    private void ShowUpdatedScore(int winnerIndex)
+    {
+        if (winnerIndex >= playerDisplayScoreDataList.GetDisplayScoreDataList().Count) return;
+
+        int newScore = playersScores[winnerIndex];
+        playerDisplayScoreDataList.GetDisplayScoreDataList()[winnerIndex].SetDisplayPlayerScore(newScore.ToString());
+    }
+
+    [Server]
+    private void CheckGameWinner()
+    {
+        foreach (var player in playersScores)
+        {
+            if (player.Value == 3)
+            {
+                OnGameOver?.Invoke(player.Key);
+                break;
+            }
+        }
+    }
+
+    #endregion
+
+    #region Client
 
     private void Awake()
     {
@@ -33,69 +84,31 @@ public class GlobalScoreManager : NetworkBehaviour
             playersBlinkDatas.Add(index, blinkTime);
     }
 
-    private void OnPlayerHitHandler(int playerIndex, int enemyIndex)
+    private void OnPlayerHitHandler(int playerIndex, int enemyIndex, bool isEnemyBlinking)
     {
-        if (playersBlinkDatas.ContainsKey(enemyIndex) == false)
+        if (isEnemyBlinking == false)
         {
             OnPlayerWinLose?.Invoke(playerIndex, enemyIndex);
-            SaveWinnerScore(playerIndex);
+            SaveAndShowWinnerScore(playerIndex);
             CheckGameWinner();
-            return;
-        }
-
-        if (playersBlinkDatas[playerIndex] < playersBlinkDatas[enemyIndex])
-        {
-            OnPlayerWinLose?.Invoke(playerIndex, enemyIndex);
-            SaveWinnerScore(playerIndex);
         }
         else
         {
-            OnPlayerWinLose?.Invoke(enemyIndex, playerIndex);
-            SaveWinnerScore(enemyIndex);
-        }
-
-        CheckGameWinner();
-    }
-
-    private void SaveWinnerScore(int winnerIndex)
-    {
-        if (playersScores.ContainsKey(winnerIndex))
-            playersScores[winnerIndex]++;
-        else
-            playersScores.Add(winnerIndex, 1);
-
-        ShowUpdatedScore(winnerIndex);
-    }
-
-    private void ShowUpdatedScore(int winnerIndex)
-    {
-        int newScore = playersScores[winnerIndex];
-        playerDisplayScoreDataList.GetDisplayScoreDataList()[winnerIndex].SetDisplayPlayerScore(newScore.ToString());
-    }
-
-    private void CheckGameWinner()
-    {
-        foreach (var player in playersScores)
-        {
-            print($"player{player.Key} has {player.Value} scores");
-            
-            if (player.Value == 3)
+            if (playersBlinkDatas[playerIndex] < playersBlinkDatas[enemyIndex])
             {
-                OnGameOver?.Invoke(player.Key);
-                ResetAndUpdatePlayersScores();
-                break;
+                OnPlayerWinLose?.Invoke(playerIndex, enemyIndex);
+                SaveAndShowWinnerScore(playerIndex);
             }
+            else if (playersBlinkDatas[playerIndex] > playersBlinkDatas[enemyIndex])
+            {
+                OnPlayerWinLose?.Invoke(enemyIndex, playerIndex);
+                SaveAndShowWinnerScore(enemyIndex);
+            }
+            else if (playersBlinkDatas[playerIndex] == playersBlinkDatas[enemyIndex]) return;
+
+            CheckGameWinner();
         }
     }
 
-    private void ResetAndUpdatePlayersScores()
-    {
-        playersBlinkDatas.Clear();
-
-        for (int i = 0; i < playersScores.Count; i++)
-        {
-            playersScores[i] = 0;
-            ShowUpdatedScore(i);
-        }
-    }
+    #endregion
 }

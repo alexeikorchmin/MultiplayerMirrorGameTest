@@ -20,10 +20,17 @@ public class CustomNetworkPlayer : NetworkBehaviour
     [SerializeField] private Color playerColor = Color.clear;
 
     private PlayerDisplayScoreData playerDisplayScoreData;
-    private Color previousColor;
-    private bool canAttack = true;
+    private Color previousColor = Color.clear;
+    private Color isAttackedColor = Color.black;
+    private bool canBeAttacked = true;
 
     #region Server
+
+    [Server]
+    public bool GetIsBlinking()
+    {
+        return playerBlink.GetIsBlinking();
+    }
 
     [Server]
     public string GetPlayerName()
@@ -32,9 +39,9 @@ public class CustomNetworkPlayer : NetworkBehaviour
     }
 
     [Server]
-    public bool GetCanAttack()
+    public bool GetCanBeAttacked()
     {
-        return canAttack;
+        return canBeAttacked;
     }
 
     [Server]
@@ -56,6 +63,12 @@ public class CustomNetworkPlayer : NetworkBehaviour
         playerColor = newPlayerColor;
     }
 
+    [Command]
+    private void CmdInit()
+    {
+        RpcInit();
+    }
+
     #endregion
 
     #region Client
@@ -74,17 +87,18 @@ public class CustomNetworkPlayer : NetworkBehaviour
         playerDisplayScoreData.SetGOValue(false);
     }
 
-    private void OnGameOverHandler(int winnerIndex)
-    {
-        RpcInit();
-    }
-
     [ClientRpc]
     private void RpcInit()
     {
         StopAllCoroutines();
-        SetPlayerColor(previousColor);
-        canAttack = true;
+        canBeAttacked = true;
+
+        if (previousColor != Color.black &&
+            previousColor != null &&
+            previousColor != Color.clear)
+        {
+            SetPlayerColor(previousColor);
+        }
     }
 
     [ClientRpc]
@@ -92,8 +106,13 @@ public class CustomNetworkPlayer : NetworkBehaviour
     {
         if (playerIndex == winnerIndex)
             WinBattle();
-        if (playerIndex == loserIndex)
+        else if (playerIndex == loserIndex)
             LoseBattle();
+    }
+
+    private void OnGameOverHandler(int winnerIndex)
+    {
+        CmdInit();
     }
 
     private void PlayerNameUpdateHandler(string oldName, string newName)
@@ -116,22 +135,22 @@ public class CustomNetworkPlayer : NetworkBehaviour
 
     private void WinBattle()
     {
-        Debug.Log($"Player {playerName} Won Battle");
+        Debug.Log($"WinBattle: PlayerIndex= {playerIndex}, PlayerName = {playerName} Won Battle");
     }
 
     private void LoseBattle()
     {
-        Debug.Log($"Player {playerName} Lost Battle");
         previousColor = playerColor;
-        SetPlayerColor(Color.black);
-        canAttack = false;
+
+        SetPlayerColor(isAttackedColor);
+        canBeAttacked = false;
         StartCoroutine(WaitForVulnerablitity());
     }
 
     private IEnumerator WaitForVulnerablitity()
     {
         yield return new WaitForSeconds(invulnerabilityDuration);
-        canAttack = true;
+        canBeAttacked = true;
         SetPlayerColor(previousColor);
     }
 
