@@ -1,14 +1,32 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
 
 public class CustomNetworkManager : NetworkManager
 {
+    public static event Action OnClientConnected;
+    public static event Action OnClientDisconnected;
+    
     [SerializeField] private PlayerDisplayScoreDataList playerDisplayScoreDataList;
     [SerializeField] private RestartGameManager restartGameManager;
 
     private List<PlayerDisplayScoreData> playerDisplayScoreDatas = new List<PlayerDisplayScoreData>();
     private int playerIndex;
+
+    public override void OnClientConnect()
+    {
+        base.OnClientConnect();
+
+        OnClientConnected?.Invoke();
+    }
+
+    public override void OnClientDisconnect()
+    {
+        base.OnClientDisconnect();
+
+        OnClientDisconnected?.Invoke();
+    }
 
     public override void Awake()
     {
