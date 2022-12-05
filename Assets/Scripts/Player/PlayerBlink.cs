@@ -29,10 +29,7 @@ public class PlayerBlink : NetworkBehaviour
     #region Server
 
     [Server]
-    public bool GetIsBlinking()
-    {
-        return isBlinking;
-    }
+    public bool GetIsBlinking() => isBlinking;
 
     [Server]
     private void OnCollisionEnter(Collision collision)

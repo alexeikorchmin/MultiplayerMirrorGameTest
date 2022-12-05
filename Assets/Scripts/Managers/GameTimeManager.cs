@@ -5,10 +5,7 @@ public class GameTimeManager : NetworkBehaviour
 {
     private static float gameTime;
 
-    public static float GetGameTime()
-    {
-        return gameTime;
-    }
+    public static float GetGameTime() => gameTime;
 
     [Server]
     private void FixedUpdate()

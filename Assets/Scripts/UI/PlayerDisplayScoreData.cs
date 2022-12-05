@@ -23,10 +23,7 @@ public class PlayerDisplayScoreData : NetworkBehaviour
     #region Server
 
     [Server]
-    public bool GetGOValue()
-    {
-        return go.activeSelf;
-    }
+    public bool GetGOValue() => go.activeSelf;
 
     [Server]
     public void SetDisplayPlayerName(string name)

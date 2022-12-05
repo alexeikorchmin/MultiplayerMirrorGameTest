@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 814815273522984884}
   - component: {fileID: 7212370082322340608}
   m_Layer: 0
-  m_Name: LobbyPlayerBackground
+  m_Name: RoomPlayerBackground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

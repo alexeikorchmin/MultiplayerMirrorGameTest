@@ -15,7 +15,8 @@ public class RestartGameManager : NetworkBehaviour
     [SerializeField] private float countdownInitValue;
     [SerializeField] private List<Transform> spawnPositions = new List<Transform>();
     [SerializeField] private GlobalScoreManager globalScoreManager;
-
+    [SerializeField] private CustomNetworkManager customNetworkManager;
+    
     [SyncVar(hook = nameof(UpdateWinnerName))]
     private string winnerName;
 
@@ -26,17 +27,16 @@ public class RestartGameManager : NetworkBehaviour
     #region Server
 
     [Server]
-    public void AddPlayerToList(CustomNetworkPlayer player, int index)
-    {
-        players.Insert(index, player);
-    }
-
-    [Server]
     private void SetPlayersToSpawnPositions()
     {
+        print($"SetPlayersToSpawnPositions: players.Count = {players.Count}");
+
         foreach (var player in players)
         {
             var random = UnityEngine.Random.Range(0, spawnPositions.Count);
+
+            if (player == null) return;
+
             player.transform.position = spawnPositions[random].position;
         }
     }
@@ -44,8 +44,13 @@ public class RestartGameManager : NetworkBehaviour
     [Server]
     private void FindWinnerNameByIndex(int index)
     {
+        players = customNetworkManager.GetPlayersList();
+        print($"FindWinnerNameByIndex: players.Count = {players.Count}");
+
         foreach (var player in players)
         {
+            if (player == null) return;
+
             if (player.playerIndex == index)
             {
                 winnerName = player.GetPlayerName();

@@ -29,10 +29,7 @@ public class CustomPlayerMovement : NetworkBehaviour
     #region Server
 
     [Server]
-    public Vector3 GetMoveDirection()
-    {
-        return movementDirection;
-    }
+    public Vector3 GetMoveDirection() => movementDirection;
 
     [Server]
     private void OnCollisionEnter(Collision collision)
