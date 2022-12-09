@@ -3,14 +3,11 @@ using UnityEngine;
 using Color = UnityEngine.Color;
 using TMPro;
 using Mirror;
-using System;
 
 public class CustomNetworkPlayer : NetworkBehaviour
 {
-    public static event Action<CustomNetworkPlayer> OnPlayerExitGame;
-
     public int playerIndex { get; private set; }
-        
+
     [SerializeField] private TMP_Text playerNameText = null;
     [SerializeField] private Renderer colorRenderer = null;
     [SerializeField] private PlayerBlink playerBlink;
@@ -38,6 +35,9 @@ public class CustomNetworkPlayer : NetworkBehaviour
     public string GetPlayerName() => playerName;
 
     [Server]
+    public Color GetPlayerColor() => playerColor;
+
+    [Server]
     public bool GetCanBeAttacked() => canBeAttacked;
 
     [Server]
@@ -59,10 +59,11 @@ public class CustomNetworkPlayer : NetworkBehaviour
     }
 
     [Server]
-    public void SetPlayerDisplayScoreData(PlayerDisplayScoreData newPlayerDisplayScoreData, bool isActive)
+    public void SetPlayerDisplayScoreData(PlayerDisplayScoreData newPlayerDisplayScoreData)
     {
+        if (newPlayerDisplayScoreData == null) return;
+
         playerDisplayScoreData = newPlayerDisplayScoreData;
-        playerDisplayScoreData.SetGOValue(isActive);
     }
 
     [Command]
@@ -74,12 +75,6 @@ public class CustomNetworkPlayer : NetworkBehaviour
     #endregion
 
     #region Client
-
-    public override void OnStopClient()
-    {
-        OnPlayerExitGame?.Invoke(this);
-        base.OnStopClient();
-    }
 
     private void Awake()
     {
@@ -141,8 +136,6 @@ public class CustomNetworkPlayer : NetworkBehaviour
 
     private void PlayerDisplayScoreUpdateHandler(PlayerDisplayScoreData oldData, PlayerDisplayScoreData newData)
     {
-        if (playerDisplayScoreData == null) return;
-
         playerDisplayScoreData.SetDisplayPlayerName(playerName);
         playerDisplayScoreData.SetDisplayPlayerDataColor(playerColor);
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -11,7 +12,7 @@ public class LobbyMenu : MonoBehaviour
 
     [SerializeField] private GameObject landingPagePanel;
     [SerializeField] private GameObject enterAddressPagePanel;
-    [SerializeField] private GameObject lobbyUI;
+    [SerializeField] private GameObject lobbyPanel;
 
     [SerializeField] private Button hostLobbyButton;
     [SerializeField] private Button joinLobbyButton;
@@ -23,12 +24,42 @@ public class LobbyMenu : MonoBehaviour
     [SerializeField] private Button leaveRoomButton;
 
     [SerializeField] private TMP_InputField addressInput;
-    [SerializeField] private CustomNetworkManager customNetworkManager;
+
+    private List<CustomNetworkPlayer> players = new List<CustomNetworkPlayer>();
+
+    [SerializeField] private List<TMP_Text> lobbyPlayersTextList;
+    [SerializeField] private GameObject lobbyPlayersPanel;
+
+    private void OnPlayersListUpdatedHandler(List<CustomNetworkPlayer> newPlayersList)
+    {
+        players = newPlayersList;
+
+        UpdateLobbyPlayers();
+    }
+
+    private void UpdateLobbyPlayers()
+    {
+        for (int i = 0; i < lobbyPlayersTextList.Count; i++)
+        {
+            if (i < players.Count)
+            {
+                lobbyPlayersTextList[i].text = players[i].GetPlayerName();
+                print($"i= {i}, playerName = {players[i].GetPlayerName()}");
+                lobbyPlayersTextList[i].color = players[i].GetPlayerColor();
+            }
+            else
+            {
+                lobbyPlayersTextList[i].text = "WaitingMuchTime";
+                lobbyPlayersTextList[i].color = Color.white;
+            }
+        }
+    }
 
     private void Awake()
     {
         CustomNetworkManager.OnClientConnected += OnClientConnectedHandler;
         CustomNetworkManager.OnClientDisconnected += OnClientDisconnectedHandler;
+        CustomNetworkManager.OnPlayersListUpdated += OnPlayersListUpdatedHandler;
 
         hostLobbyButton.onClick.AddListener(HostLobby);
         joinLobbyButton.onClick.AddListener(JoinLobby);
@@ -44,6 +75,7 @@ public class LobbyMenu : MonoBehaviour
     {
         CustomNetworkManager.OnClientConnected -= OnClientConnectedHandler;
         CustomNetworkManager.OnClientDisconnected -= OnClientDisconnectedHandler;
+        CustomNetworkManager.OnPlayersListUpdated -= OnPlayersListUpdatedHandler;
     }
 
     private void OnClientConnectedHandler()
@@ -52,7 +84,8 @@ public class LobbyMenu : MonoBehaviour
 
         enterAddressPagePanel.SetActive(false);
         landingPagePanel.SetActive(false);
-        lobbyUI.SetActive(true);
+        lobbyPanel.SetActive(true);
+        lobbyPlayersPanel.SetActive(true);
     }
 
     private void OnClientDisconnectedHandler()
@@ -63,8 +96,8 @@ public class LobbyMenu : MonoBehaviour
     private void HostLobby()
     {
         landingPagePanel.SetActive(false);
-        lobbyUI.SetActive(true);
-        startGameButton.gameObject.SetActive(true);
+        lobbyPanel.SetActive(true);
+        lobbyPlayersPanel.SetActive(true);
         NetworkManager.singleton.StartHost();
     }
 
@@ -91,7 +124,7 @@ public class LobbyMenu : MonoBehaviour
 
     private void StartGame()
     {
-        if (NetworkServer.active && NetworkClient.isConnected && customNetworkManager.GetPlayersList().Count > 1)
+        if (NetworkServer.active && NetworkClient.isConnected && players.Count > 1)
         {
             OnGameStarted?.Invoke();
         }

@@ -15,7 +15,6 @@ public class RestartGameManager : NetworkBehaviour
     [SerializeField] private float countdownInitValue;
     [SerializeField] private List<Transform> spawnPositions = new List<Transform>();
     [SerializeField] private GlobalScoreManager globalScoreManager;
-    [SerializeField] private CustomNetworkManager customNetworkManager;
     
     [SyncVar(hook = nameof(UpdateWinnerName))]
     private string winnerName;
@@ -44,7 +43,6 @@ public class RestartGameManager : NetworkBehaviour
     [Server]
     private void FindWinnerNameByIndex(int index)
     {
-        players = customNetworkManager.GetPlayersList();
         print($"FindWinnerNameByIndex: players.Count = {players.Count}");
 
         foreach (var player in players)
@@ -58,7 +56,7 @@ public class RestartGameManager : NetworkBehaviour
             }
         }
     }
-        
+
     #endregion
 
     #region Client
@@ -66,6 +64,7 @@ public class RestartGameManager : NetworkBehaviour
     private void Awake()
     {
         GlobalScoreManager.OnGameOver += RpcOnGameOverHandler;
+        CustomNetworkManager.OnPlayersListUpdated += OnPlayersListUpdatedHandler;
         GameOverPanel.SetActive(false);
         countdownValue = countdownInitValue;
     }
@@ -73,11 +72,22 @@ public class RestartGameManager : NetworkBehaviour
     private void OnDestroy()
     {
         GlobalScoreManager.OnGameOver -= RpcOnGameOverHandler;
+        CustomNetworkManager.OnPlayersListUpdated -= OnPlayersListUpdatedHandler;
     }
 
     private void FixedUpdate()
     {
         Countdown();
+    }
+
+    private void OnPlayersListUpdatedHandler(List<CustomNetworkPlayer> newPlayersList)
+    {
+        players = newPlayersList;
+    }
+
+    private void UpdateWinnerName(string oldWinner, string newWinner)
+    {
+        winnerNameText.text = $"Winner is {newWinner}";
     }
 
     private void Countdown()
@@ -86,11 +96,6 @@ public class RestartGameManager : NetworkBehaviour
 
         countdownText.text = ((int)countdownValue).ToString();
         countdownValue -= Time.deltaTime;
-    }
-
-    private void UpdateWinnerName(string oldWinner, string newWinner)
-    {
-        winnerNameText.text = $"Winner is {newWinner}";
     }
 
     [ClientRpc]

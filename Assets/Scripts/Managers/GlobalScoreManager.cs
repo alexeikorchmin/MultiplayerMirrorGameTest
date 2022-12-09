@@ -41,10 +41,10 @@ public class GlobalScoreManager : NetworkBehaviour
     [Server]
     private void ShowUpdatedScore(int winnerIndex)
     {
-        if (winnerIndex >= playerDisplayScoreDataList.GetDisplayScoreDataList().Count) return;
+        if (winnerIndex >= playerDisplayScoreDataList.GetPlayerDisplayScoreDataList().Count) return;
 
         int newScore = playersScores[winnerIndex];
-        playerDisplayScoreDataList.GetDisplayScoreDataList()[winnerIndex].SetDisplayPlayerScore(newScore.ToString());
+        playerDisplayScoreDataList.GetPlayerDisplayScoreDataList()[winnerIndex].SetDisplayPlayerScore(newScore.ToString());
     }
 
     [Server]
