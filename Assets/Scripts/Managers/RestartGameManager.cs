@@ -28,8 +28,6 @@ public class RestartGameManager : NetworkBehaviour
     [Server]
     private void SetPlayersToSpawnPositions()
     {
-        print($"SetPlayersToSpawnPositions: players.Count = {players.Count}");
-
         foreach (var player in players)
         {
             var random = UnityEngine.Random.Range(0, spawnPositions.Count);
@@ -43,8 +41,6 @@ public class RestartGameManager : NetworkBehaviour
     [Server]
     private void FindWinnerNameByIndex(int index)
     {
-        print($"FindWinnerNameByIndex: players.Count = {players.Count}");
-
         foreach (var player in players)
         {
             if (player == null) return;

@@ -25,35 +25,7 @@ public class LobbyMenu : MonoBehaviour
 
     [SerializeField] private TMP_InputField addressInput;
 
-    private List<CustomNetworkPlayer> players = new List<CustomNetworkPlayer>();
-
-    [SerializeField] private List<TMP_Text> lobbyPlayersTextList;
-    [SerializeField] private GameObject lobbyPlayersPanel;
-
-    private void OnPlayersListUpdatedHandler(List<CustomNetworkPlayer> newPlayersList)
-    {
-        players = newPlayersList;
-
-        UpdateLobbyPlayers();
-    }
-
-    private void UpdateLobbyPlayers()
-    {
-        for (int i = 0; i < lobbyPlayersTextList.Count; i++)
-        {
-            if (i < players.Count)
-            {
-                lobbyPlayersTextList[i].text = players[i].GetPlayerName();
-                print($"i= {i}, playerName = {players[i].GetPlayerName()}");
-                lobbyPlayersTextList[i].color = players[i].GetPlayerColor();
-            }
-            else
-            {
-                lobbyPlayersTextList[i].text = "WaitingMuchTime";
-                lobbyPlayersTextList[i].color = Color.white;
-            }
-        }
-    }
+    private int playersCount;
 
     private void Awake()
     {
@@ -85,7 +57,6 @@ public class LobbyMenu : MonoBehaviour
         enterAddressPagePanel.SetActive(false);
         landingPagePanel.SetActive(false);
         lobbyPanel.SetActive(true);
-        lobbyPlayersPanel.SetActive(true);
     }
 
     private void OnClientDisconnectedHandler()
@@ -93,11 +64,15 @@ public class LobbyMenu : MonoBehaviour
         joinRoomButton.interactable = true;
     }
 
+    private void OnPlayersListUpdatedHandler(List<CustomNetworkPlayer> newPlayersList)
+    {
+        playersCount = newPlayersList.Count;
+    }
+
     private void HostLobby()
     {
         landingPagePanel.SetActive(false);
         lobbyPanel.SetActive(true);
-        lobbyPlayersPanel.SetActive(true);
         NetworkManager.singleton.StartHost();
     }
 
@@ -124,7 +99,7 @@ public class LobbyMenu : MonoBehaviour
 
     private void StartGame()
     {
-        if (NetworkServer.active && NetworkClient.isConnected && players.Count > 1)
+        if (NetworkServer.active && NetworkClient.isConnected && playersCount > 1)
         {
             OnGameStarted?.Invoke();
         }

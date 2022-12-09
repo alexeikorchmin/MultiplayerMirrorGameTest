@@ -3777,6 +3777,7 @@ MonoBehaviour:
   startGameButton: {fileID: 5994242350196245171}
   leaveRoomButton: {fileID: 1595435748}
   addressInput: {fileID: 1263795341}
+  players: []
   lobbyPlayersTextList:
   - {fileID: 899152536}
   - {fileID: 1605718894}
@@ -3787,6 +3788,7 @@ MonoBehaviour:
   - {fileID: 1456146901}
   - {fileID: 2146136815}
   lobbyPlayersPanel: {fileID: 1559902874}
+  lobbyPlayersCount: 0
 --- !u!1001 &1253418105
 PrefabInstance:
   m_ObjectHideFlags: 0

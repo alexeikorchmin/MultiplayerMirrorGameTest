@@ -30,15 +30,10 @@ public class PlayerDisplayScoreDataList : NetworkBehaviour
             if (i < players.Count)
             {
                 players[i].SetPlayerDisplayScoreData(playerDisplayScoreDataList[i]);
-                print($"i= {i} playerIndex = {players[i].playerIndex} GetNewScoreLine = {playerDisplayScoreDataList[i]}");
-                print($"i= {i} playerName = {players[i].GetPlayerName()} GetNewScoreLine = {playerDisplayScoreDataList[i]}");
                 playerDisplayScoreDataList[i].SetGOValue(true);
             }
             else
-            {
                 playerDisplayScoreDataList[i].SetGOValue(false);
-                //print($"i= {i}, DisplayScoreLine = {playerDisplayScoreDataList[i]} state = {playerDisplayScoreDataList[i].GetGOValue()}");
-            }
         }
     }
 }

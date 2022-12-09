@@ -18,40 +18,33 @@ public class CustomNetworkManager : NetworkManager
 
         if (player == null) return;
 
-        print($"OnServerDisconnect: player{player.playerIndex} disconnected");
         players.Remove(player);
 
         foreach (var eachPlayer in players)
         {
-            print($"UpdateIndex/ playerName= {eachPlayer.GetPlayerName()} Old Index= {eachPlayer.playerIndex}");
             eachPlayer.SetPlayerIndex(players.IndexOf(eachPlayer));
-            print($"UpdateIndex/ playerName= {eachPlayer.GetPlayerName()} New Index= {eachPlayer.playerIndex}");
         }
 
         OnPlayersListUpdated?.Invoke(players);
-
         base.OnServerDisconnect(conn);
     }
 
     public override void OnStopServer()
     {
-        print($"OnStopServer: players.Clear();");
         players.Clear();
         OnPlayersListUpdated?.Invoke(players);
     }
 
     public override void OnClientConnect()
     {
-        base.OnClientConnect();
-
         OnClientConnected?.Invoke();
+        base.OnClientConnect();
     }
 
     public override void OnClientDisconnect()
     {
-        base.OnClientDisconnect();
-
         OnClientDisconnected?.Invoke();
+        base.OnClientDisconnect();
     }
 
     [Server]
@@ -65,7 +58,6 @@ public class CustomNetworkManager : NetworkManager
         players.Add(player);
         playerIndex = players.IndexOf(player);
         player.SetPlayerIndex(playerIndex);
-        print($"NetManager: playerIndex = {playerIndex}");
         player.SetPlayerName($"Player {players.Count}");
 
         Color color = new Color(
